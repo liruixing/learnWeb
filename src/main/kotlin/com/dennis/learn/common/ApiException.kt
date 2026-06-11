@@ -12,3 +12,5 @@ fun notFound(message: String): Nothing = throw ApiException(HttpStatus.NOT_FOUND
 fun conflict(message: String): Nothing = throw ApiException(HttpStatus.CONFLICT, message)
 
 fun badRequest(message: String): Nothing = throw ApiException(HttpStatus.BAD_REQUEST, message)
+
+fun forbidden(message: String): Nothing = throw ApiException(HttpStatus.FORBIDDEN, message)

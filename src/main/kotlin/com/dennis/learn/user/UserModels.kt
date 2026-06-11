@@ -98,9 +98,30 @@ data class UpdateUserStatusRequest(
 	val status: UserStatus,
 )
 
+data class AdminUpdateUserStatusRequest(
+	@field:Schema(description = "管理员用户 ID。后续接入登录后可替换为当前登录用户。", example = "2")
+	val managerId: Long,
+
+	@field:Schema(description = "用户状态", example = "disabled")
+	val status: UserStatus,
+)
+
 data class AssignRolesRequest(
 	@field:Schema(description = "角色编码集合", example = "[\"USER\", \"AUTHOR\"]")
 	val roleCodes: Set<String>,
+)
+
+data class AdminAssignRolesRequest(
+	@field:Schema(description = "管理员用户 ID。后续接入登录后可替换为当前登录用户。", example = "2")
+	val managerId: Long,
+
+	@field:Schema(description = "角色编码集合", example = "[\"USER\", \"AUTHOR\"]")
+	val roleCodes: Set<String>,
+)
+
+data class AdminDeleteUserRequest(
+	@field:Schema(description = "管理员用户 ID。后续接入登录后可替换为当前登录用户。", example = "2")
+	val managerId: Long,
 )
 
 data class UserResponse(

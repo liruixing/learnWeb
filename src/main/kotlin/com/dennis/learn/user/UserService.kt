@@ -2,6 +2,7 @@ package com.dennis.learn.user
 
 import com.dennis.learn.common.badRequest
 import com.dennis.learn.common.conflict
+import com.dennis.learn.common.forbidden
 import com.dennis.learn.common.notFound
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder
 import org.springframework.stereotype.Service
@@ -48,6 +49,16 @@ class UserService(
 		return user.toResponse(roleRepository.findByUserId(user.id))
 	}
 
+	fun listManagedUsers(managerId: Long, status: UserStatus?, page: Int, size: Int): List<UserResponse> {
+		validateAdmin(managerId)
+		return listUsers(status, page, size)
+	}
+
+	fun getManagedUser(managerId: Long, id: Long): UserResponse {
+		validateAdmin(managerId)
+		return getUser(id)
+	}
+
 	@Transactional
 	fun updateUser(id: Long, request: UpdateUserRequest): UserResponse {
 		val current = userRepository.findById(id) ?: notFound("user not found: $id")
@@ -58,9 +69,24 @@ class UserService(
 	}
 
 	@Transactional
+	fun updateManagedUser(managerId: Long, id: Long, request: UpdateUserRequest): UserResponse {
+		validateAdmin(managerId)
+		return updateUser(id, request)
+	}
+
+	@Transactional
 	fun updateStatus(id: Long, status: UserStatus): UserResponse {
 		val user = userRepository.updateStatus(id, status) ?: notFound("user not found: $id")
 		return user.toResponse(roleRepository.findByUserId(user.id))
+	}
+
+	@Transactional
+	fun updateManagedStatus(id: Long, request: AdminUpdateUserStatusRequest): UserResponse {
+		validateAdmin(request.managerId)
+		if (id == request.managerId && request.status == UserStatus.disabled) {
+			badRequest("admin cannot disable current manager account")
+		}
+		return updateStatus(id, request.status)
 	}
 
 	@Transactional
@@ -83,10 +109,28 @@ class UserService(
 	}
 
 	@Transactional
+	fun assignManagedRoles(id: Long, request: AdminAssignRolesRequest): UserResponse {
+		validateAdmin(request.managerId)
+		if (id == request.managerId && "ADMIN" !in request.roleCodes.map { it.trim().uppercase() }.toSet()) {
+			badRequest("admin cannot remove ADMIN role from current manager account")
+		}
+		return assignRoles(id, AssignRolesRequest(request.roleCodes))
+	}
+
+	@Transactional
 	fun deleteUser(id: Long) {
 		if (!userRepository.softDelete(id)) {
 			notFound("user not found: $id")
 		}
+	}
+
+	@Transactional
+	fun deleteManagedUser(id: Long, request: AdminDeleteUserRequest) {
+		validateAdmin(request.managerId)
+		if (id == request.managerId) {
+			badRequest("admin cannot delete current manager account")
+		}
+		deleteUser(id)
 	}
 
 	fun verifyPassword(username: String, rawPassword: String): Boolean {
@@ -120,6 +164,16 @@ class UserService(
 			if (userRepository.existsByPhone(it)) {
 				conflict("phone already exists")
 			}
+		}
+	}
+
+	private fun validateAdmin(userId: Long) {
+		val user = userRepository.findById(userId) ?: forbidden("only admin can manage users")
+		if (user.status != UserStatus.active) {
+			forbidden("only active admin can manage users")
+		}
+		if (roleRepository.findByUserId(userId).none { it.code == "ADMIN" }) {
+			forbidden("only admin can manage users")
 		}
 	}
 }
