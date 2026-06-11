@@ -139,3 +139,43 @@ CREATE TABLE IF NOT EXISTS comments (
   CONSTRAINT fk_comments_user_id FOREIGN KEY (user_id) REFERENCES users (id),
   CONSTRAINT fk_comments_parent_id FOREIGN KEY (parent_id) REFERENCES comments (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文章评论表';
+
+CREATE TABLE IF NOT EXISTS attachments (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '附件 ID',
+  article_id BIGINT NULL COMMENT '绑定文章 ID，临时资源为空',
+  upload_token VARCHAR(80) NULL COMMENT '编辑会话 ID',
+  original_name VARCHAR(255) NOT NULL COMMENT '原始文件名',
+  file_name VARCHAR(255) NOT NULL COMMENT '服务端保存文件名',
+  file_path VARCHAR(1000) NOT NULL COMMENT '本地文件路径',
+  file_url VARCHAR(1000) NOT NULL COMMENT '访问 URL',
+  object_key VARCHAR(500) NOT NULL COMMENT '本地文件 key，后续可迁移到 OSS/S3 object_key',
+  mime_type VARCHAR(120) NOT NULL COMMENT '文件 MIME 类型',
+  file_size BIGINT NOT NULL COMMENT '文件大小',
+  file_hash VARCHAR(64) NOT NULL COMMENT '文件 SHA-256',
+  type VARCHAR(20) NOT NULL COMMENT '资源类型：image、file',
+  status VARCHAR(20) NOT NULL DEFAULT 'temp' COMMENT '资源状态：temp、bound、deleted',
+  created_by BIGINT NOT NULL COMMENT '上传用户 ID',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  bound_at DATETIME NULL COMMENT '绑定时间',
+  deleted_at DATETIME NULL COMMENT '删除时间',
+  PRIMARY KEY (id),
+  KEY idx_attachments_article_id (article_id),
+  KEY idx_attachments_upload_token (upload_token),
+  KEY idx_attachments_status_created (status, created_at),
+  KEY idx_attachments_created_by (created_by),
+  CONSTRAINT fk_attachments_article_id FOREIGN KEY (article_id) REFERENCES articles (id),
+  CONSTRAINT fk_attachments_created_by FOREIGN KEY (created_by) REFERENCES users (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='图片和附件资源表';
+
+CREATE TABLE IF NOT EXISTS article_attachments (
+  id BIGINT NOT NULL AUTO_INCREMENT COMMENT '关联 ID',
+  article_id BIGINT NOT NULL COMMENT '文章 ID',
+  attachment_id BIGINT NOT NULL COMMENT '附件 ID',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_article_attachments_article_attachment (article_id, attachment_id),
+  KEY idx_article_attachments_attachment_id (attachment_id),
+  CONSTRAINT fk_article_attachments_article_id FOREIGN KEY (article_id) REFERENCES articles (id),
+  CONSTRAINT fk_article_attachments_attachment_id FOREIGN KEY (attachment_id) REFERENCES attachments (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='文章附件引用关系表';

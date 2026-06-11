@@ -9,6 +9,94 @@
   - `demo_reader`：普通用户，常见 ID 为 `11`
 - Swagger 地址：`http://localhost:8080/swagger-ui/index.html`
 
+## 文件上传
+
+| 方法 | 路径 | 说明 |
+| --- | --- | --- |
+| `POST` | `/api/uploads/sessions` | 创建编辑会话，返回 `uploadToken` |
+| `POST` | `/api/uploads` | 上传图片或附件，保存到本地 `uploads` 目录 |
+| `GET` | `/api/uploads/{id}` | 查询附件详情 |
+| `GET` | `/api/uploads` | 查询某个编辑会话下的附件列表 |
+| `DELETE` | `/api/uploads/{id}` | 删除未绑定附件 |
+
+创建编辑会话请求体：
+
+```json
+{
+  "userId": 2
+}
+```
+
+上传文件请求：
+
+```http
+POST /api/uploads?userId=2&uploadToken=编辑会话ID
+Content-Type: multipart/form-data
+```
+
+表单字段：
+
+| 字段 | 说明 |
+| --- | --- |
+| `file` | 文件，必填 |
+| `userId` | 上传用户 ID，必填 |
+| `uploadToken` | 编辑会话 ID，可选；创建/编辑文章页建议传 |
+
+上传成功后会返回附件元数据，例如：
+
+```json
+{
+  "id": 1,
+  "articleId": null,
+  "uploadToken": "editor-session-id",
+  "originalName": "demo.png",
+  "fileName": "uuid.png",
+  "fileUrl": "/uploads/2026/06/11/uuid.png",
+  "objectKey": "2026/06/11/uuid.png",
+  "mimeType": "image/png",
+  "fileSize": 12345,
+  "fileHash": "sha256",
+  "type": "image",
+  "status": "temp"
+}
+```
+
+文章内容中可以引用：
+
+```markdown
+![图片](/uploads/2026/06/11/uuid.png)
+```
+
+也可以引用资源 ID：
+
+```markdown
+![图片](attachment://1)
+```
+
+文章创建或编辑成功后，后端会扫描 `contentMd`、`contentHtml`、`coverUrl` 中引用的附件，把 `temp` 资源绑定到文章，状态变为 `bound`。
+
+查询编辑会话附件：
+
+```http
+GET /api/uploads?userId=2&uploadToken=编辑会话ID&status=temp
+```
+
+`status` 可选，值为 `temp` / `bound` / `deleted`。
+
+删除未绑定附件请求体：
+
+```json
+{
+  "userId": 2
+}
+```
+
+本地文件访问地址：
+
+```http
+GET /uploads/2026/06/11/uuid.png
+```
+
 ## 用户模块
 
 | 方法 | 路径 | 说明 |

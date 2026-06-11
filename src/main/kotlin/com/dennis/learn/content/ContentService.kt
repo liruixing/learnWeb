@@ -1,5 +1,6 @@
 package com.dennis.learn.content
 
+import com.dennis.learn.attachment.AttachmentService
 import com.dennis.learn.common.badRequest
 import com.dennis.learn.common.conflict
 import com.dennis.learn.common.forbidden
@@ -11,6 +12,7 @@ import java.time.LocalDateTime
 @Service
 class ContentService(
 	private val contentRepository: ContentRepository,
+	private val attachmentService: AttachmentService,
 ) {
 	fun listArticles(query: ArticleListQuery): ArticlePageResponse =
 		toPage(
@@ -206,6 +208,13 @@ class ContentService(
 		val article = contentRepository.createDraftArticle(request, slug)
 		contentRepository.replaceArticleCategories(article.id, categories)
 		contentRepository.replaceArticleTags(article.id, tags)
+		attachmentService.bindArticleAttachments(
+			articleId = article.id,
+			operatorId = request.authorId,
+			contentMd = request.contentMd,
+			contentHtml = request.contentHtml,
+			coverUrl = request.coverUrl,
+		)
 
 		return article.toResponse(categories, tags)
 	}
@@ -227,6 +236,13 @@ class ContentService(
 		val article = contentRepository.updateArticle(id, request, slug) ?: notFound("article not found: $id")
 		contentRepository.replaceArticleCategories(article.id, categories)
 		contentRepository.replaceArticleTags(article.id, tags)
+		attachmentService.bindArticleAttachments(
+			articleId = article.id,
+			operatorId = request.authorId,
+			contentMd = request.contentMd,
+			contentHtml = request.contentHtml,
+			coverUrl = request.coverUrl,
+		)
 
 		return article.toResponse(categories, tags)
 	}
